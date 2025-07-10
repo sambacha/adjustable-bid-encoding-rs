@@ -1,8 +1,10 @@
-# Adjustable Bid Encoding for Rust
+# Adjustable Bid Encoding 
 
-This crate provides a Rust implementation of adjustable Ethereum block submission requests for use by block builders. It is compatible with the Go reference implementation and supports current and upcoming Ethereum forks.
+> [!NOTE]
+> This crate provides a Rust implementation of adjustable Ethereum block submission requests for use by block builders.
 
-## Overview
+> Based on Go reference implementation from Ultra Sound Relay
+
 
 * Submission of block data using adjustable request formats.
 * Compatibility with Ethereum's Deneb and Electra forks.
@@ -70,7 +72,12 @@ let request = AdjustableSubmitBlockRequest {
 
 ## SSZ Support
 
-SSZ serialization and deserialization is provided via the [`sszb`](https://github.com/sigp/ssz-rs) library. This is an optional feature and must be enabled explicitly.
+SSZ serialization and deserialization is *typically* used via the [`ssz-rs`](https://github.com/sigp/ssz-rs) library.
+
+Instead we are using [`sszb`](https://github.com/ghiliweld/sszb.git)
+
+> [!WARNING]
+> The amount of crates needed to implement SSZ in Alloy is like 5 crates. YMMV.
 
 ```toml
 [dependencies]
