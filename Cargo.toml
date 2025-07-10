@@ -1,0 +1,24 @@
+[package]
+name = "adjustable-bid-encoding-rs"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+alloy-primitives = "0.8"
+alloy-rpc-types-beacon = "0.3"
+alloy-rpc-types-engine = "0.3"
+alloy-eips = "0.3"
+bytes = "1.6"
+eyre = "0.6"
+thiserror = "1.0"
+tokio = { version = "1", features = ["full"] }
+# SSZ dependencies using sszb
+sszb = { package = "sszb", git = "https://github.com/ghiliweld/sszb.git", optional = true }
+sszb_derive = { package = "sszb_derive", git = "https://github.com/ghiliweld/sszb.git", optional = true }
+
+[features]
+default = []
+ssz = [
+    "dep:sszb",
+    "dep:sszb_derive",
+]
