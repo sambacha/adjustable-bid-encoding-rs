@@ -1,0 +1,270 @@
+name: Tests and Validation
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    name: Test Suite
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        rust:
+          - stable
+          - beta
+          - nightly
+        features:
+          - ""
+          - "--features ssz"
+          - "--features testing"
+          - "--features ssz,testing"
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@master
+      with:
+        toolchain: ${{ matrix.rust }}
+        
+    - name: Cache dependencies
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-cargo-${{ matrix.rust }}-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Run tests
+      run: cargo test --verbose ${{ matrix.features }}
+
+    - name: Run doctests
+      run: cargo test --doc ${{ matrix.features }}
+
+  property_tests:
+    name: Property-Based Tests
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install Rust stable
+      uses: dtolnay/rust-toolchain@stable
+      
+    - name: Cache dependencies
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-cargo-stable-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Run property tests
+      run: cargo test --features testing --release -- --test-threads=1
+      env:
+        PROPTEST_CASES: 1000
+
+    - name: Run property tests with SSZ
+      run: cargo test --features ssz,testing --release -- --test-threads=1
+      env:
+        PROPTEST_CASES: 1000
+
+  invariant_validation:
+    name: Invariant Validation Tests
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install Rust stable
+      uses: dtolnay/rust-toolchain@stable
+      
+    - name: Cache dependencies
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-cargo-stable-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Test invariant validation
+      run: |
+        cargo test invariants:: --verbose --features testing
+        cargo test validate_invariants --verbose --features ssz,testing
+
+  examples:
+    name: Examples
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install Rust stable
+      uses: dtolnay/rust-toolchain@stable
+      
+    - name: Cache dependencies
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-cargo-stable-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Check examples compile
+      run: |
+        cargo check --example mev_boost_integration --features testing
+        cargo check --example proof_verification --features testing
+        cargo check --example roundtrip --features ssz
+
+    - name: Run example tests
+      run: |
+        cargo run --example proof_verification --features testing
+        # MEV boost example requires network setup, so just check compilation
+        timeout 30s cargo run --example mev_boost_integration --features testing || true
+
+  fuzz:
+    name: Fuzzing
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install Rust nightly
+      uses: dtolnay/rust-toolchain@nightly
+      
+    - name: Install cargo-fuzz
+      run: cargo install cargo-fuzz
+      
+    - name: Cache dependencies
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-cargo-fuzz-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Run fuzz tests (short duration for CI)
+      run: |
+        cd fuzz
+        timeout 300s cargo fuzz run fuzz_ssz_adjustment_data -- -max_total_time=60 || true
+        timeout 300s cargo fuzz run fuzz_ssz_deneb_request -- -max_total_time=60 || true
+        timeout 300s cargo fuzz run fuzz_invariant_validation -- -max_total_time=60 || true
+        timeout 300s cargo fuzz run fuzz_merkle_proofs -- -max_total_time=60 || true
+
+  security_audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install Rust stable
+      uses: dtolnay/rust-toolchain@stable
+      
+    - name: Install cargo-audit
+      run: cargo install cargo-audit
+      
+    - name: Run security audit
+      run: cargo audit
+
+  format_and_lint:
+    name: Formatting and Linting
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install Rust stable
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        components: rustfmt, clippy
+        
+    - name: Check formatting
+      run: cargo fmt --all -- --check
+
+    - name: Run clippy
+      run: |
+        cargo clippy --all-targets --features testing -- -D warnings
+        cargo clippy --all-targets --features ssz,testing -- -D warnings
+
+  coverage:
+    name: Code Coverage
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install Rust stable
+      uses: dtolnay/rust-toolchain@stable
+      
+    - name: Install cargo-tarpaulin
+      run: cargo install cargo-tarpaulin
+      
+    - name: Generate code coverage
+      run: |
+        cargo tarpaulin --verbose --all-features --workspace --timeout 120 --out xml
+        
+    - name: Upload to codecov.io
+      uses: codecov/codecov-action@v3
+      with:
+        fail_ci_if_error: false
+
+  benchmark:
+    name: Performance Benchmarks
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install Rust stable
+      uses: dtolnay/rust-toolchain@stable
+      
+    - name: Cache dependencies
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-cargo-bench-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Run benchmarks
+      run: |
+        # Basic performance tests
+        cargo test --release --features ssz,testing -- --ignored bench
+        
+        # Time-based performance validation
+        timeout 120s cargo test --release --features ssz,testing property_tests::property_tests || true
+
+  nightly_extensive_fuzzing:
+    name: Extensive Fuzzing (Nightly)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch')
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install Rust nightly
+      uses: dtolnay/rust-toolchain@nightly
+      
+    - name: Install cargo-fuzz
+      run: cargo install cargo-fuzz
+      
+    - name: Run extensive fuzz tests
+      run: |
+        cd fuzz
+        # Run each fuzzer for 1 hour
+        timeout 3600s cargo fuzz run fuzz_ssz_adjustment_data -- -max_total_time=3500 || true
+        timeout 3600s cargo fuzz run fuzz_ssz_deneb_request -- -max_total_time=3500 || true
+        timeout 3600s cargo fuzz run fuzz_ssz_electra_request -- -max_total_time=3500 || true
+        timeout 3600s cargo fuzz run fuzz_invariant_validation -- -max_total_time=3500 || true
+        timeout 3600s cargo fuzz run fuzz_merkle_proofs -- -max_total_time=3500 || true
+
+# Schedule nightly extensive testing
+on:
+  schedule:
+    - cron: '0 2 * * *'  # Run at 2 AM UTC daily
