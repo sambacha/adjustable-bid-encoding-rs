@@ -4,11 +4,12 @@ on:
   push:
     branches: [ master, main ]
   pull_request:
-    branches: [ master, main ]
+ 
 
 env:
   CARGO_TERM_COLOR: always
-
+  CARGO_INCREMENTAL: 0
+  
 jobs:
   test:
     name: Test Suite
@@ -27,7 +28,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    
+    - uses: taiki-e/install-action@nextest
+    - uses: Swatinem/rust-cache@v2
     - name: Install Rust
       uses: dtolnay/rust-toolchain@master
       with:
@@ -53,7 +55,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    
+    - uses: taiki-e/install-action@nextest
+    - uses: Swatinem/rust-cache@v2
     - name: Install Rust stable
       uses: dtolnay/rust-toolchain@stable
       
@@ -138,7 +141,8 @@ jobs:
     
     - name: Install Rust nightly
       uses: dtolnay/rust-toolchain@nightly
-      
+    - uses: taiki-e/install-action@nextest
+    - uses: Swatinem/rust-cache@v2
     - name: Install cargo-fuzz
       run: cargo install cargo-fuzz
       
@@ -223,7 +227,8 @@ jobs:
     
     - name: Install Rust stable
       uses: dtolnay/rust-toolchain@stable
-      
+    - uses: taiki-e/install-action@nextest
+    - uses: Swatinem/rust-cache@v2
     - name: Cache dependencies
       uses: actions/cache@v3
       with:
@@ -247,7 +252,8 @@ jobs:
     if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch')
     steps:
     - uses: actions/checkout@v4
-    
+    - uses: taiki-e/install-action@nextest
+    - uses: Swatinem/rust-cache@v2
     - name: Install Rust nightly
       uses: dtolnay/rust-toolchain@nightly
       
