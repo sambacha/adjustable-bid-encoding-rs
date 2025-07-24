@@ -269,8 +269,4 @@ jobs:
         timeout 3600s cargo fuzz run fuzz_ssz_electra_request -- -max_total_time=3500 || true
         timeout 3600s cargo fuzz run fuzz_invariant_validation -- -max_total_time=3500 || true
         timeout 3600s cargo fuzz run fuzz_merkle_proofs -- -max_total_time=3500 || true
-
-# Schedule nightly extensive testing
-on:
-  schedule:
-    - cron: '0 2 * * *'  # Run at 2 AM UTC daily
+ 
