@@ -1,5 +1,7 @@
 use alloy_primitives::{Address, B256};
 use crate::invariants::*;
+// Note: SSZ support requires manual implementation due to nested types
+// that don't have built-in SSZ support (Vec<Vec<u8>>, etc.)
 
 /// Adjustment data containing cryptographic proofs for block submission validation.
 /// 

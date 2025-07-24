@@ -2,6 +2,8 @@ use crate::types::adjustment_data::AdjustmentData;
 use alloy_eips::eip4844::BlobTransactionSidecar;
 use alloy_rpc_types_beacon::relay::BidTrace;
 use bytes::Bytes;
+// Note: SSZ support requires manual implementation due to external types
+// that don't have built-in SSZ support (BidTrace, Bytes, BlobTransactionSidecar)
 
 /// Electra fork adjustable block submission request (V4).
 /// 
@@ -36,8 +38,7 @@ use bytes::Bytes;
 /// - Execution requests: O(|consolidations| + |withdrawals| + |deposits|)
 /// - Maximum consolidations per block: 1 (EIP-7251 limit)
 /// - Maximum withdrawal requests per block: 16 (EIP-7002 limit)
-#[cfg_attr(not(feature = "ssz"), derive(Debug, Clone, PartialEq, Eq))]
-#[cfg_attr(feature = "ssz", derive(Debug, Clone, PartialEq, Eq))]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AdjustableSubmitBlockRequestV4 {
     /// Bid trace containing block metadata and builder information
     /// Must be signed by the builder's BLS key

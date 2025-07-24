@@ -3,6 +3,8 @@ use crate::invariants::*;
 use alloy_eips::eip4844::BlobTransactionSidecar;
 use alloy_rpc_types_beacon::relay::BidTrace;
 use bytes::Bytes;
+// Note: SSZ support requires manual implementation due to external types
+// that don't have built-in SSZ support (BidTrace, Bytes, BlobTransactionSidecar)
 
 /// Deneb fork adjustable block submission request.
 /// 
@@ -35,8 +37,7 @@ use bytes::Bytes;
 /// - Total serialized size: O(|execution_payload| + |blobs_bundle| + |adjustment_data|)
 /// - Signature: Fixed 96 bytes (BLS12-381)
 /// - Maximum blob count: 6 per block (protocol limit)
-#[cfg_attr(not(feature = "ssz"), derive(Debug, Clone, PartialEq, Eq))]
-#[cfg_attr(feature = "ssz", derive(Debug, Clone, PartialEq, Eq))]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AdjustableSubmitBlockRequest {
     /// Bid trace containing block metadata and builder information
     /// Must be signed by the builder's BLS key
